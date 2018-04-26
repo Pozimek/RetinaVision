@@ -1,0 +1,6 @@
+*.pyc
+*.jpeg
+*.png
+debug.py	
+workfiles/
+retinavision.egg-info/
