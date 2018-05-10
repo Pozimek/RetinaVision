@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import cv2
 import numpy as np
 from retinavision.retina import Retina
-from retinavision.cortex2 import Cortex
+from retinavision.cortex import Cortex
 from retinavision import datadir, utils
 import cPickle as pickle
 from os.path import join
