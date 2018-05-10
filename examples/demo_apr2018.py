@@ -12,7 +12,8 @@ import matplotlib.pyplot as plt
 import cv2
 import numpy as np
 from retinavision.retina import Retina
-from retinavision import cortex, datadir, utils
+from retinavision.cortex2 import Cortex
+from retinavision import datadir, utils
 import cPickle as pickle
 from os.path import join
 
@@ -33,17 +34,29 @@ y = campic.shape[0]/2
 fixation = (y,x)
 R.prepare(campic.shape, fixation)
 
+#Create and prepare cortex
+C = Cortex()
+lp = join(datadir, "cortices", "Ll.pkl")
+rp = join(datadir, "cortices", "Rl.pkl")
+C.loadLocs(lp, rp)
+C.loadCoeffs(join(datadir, "cortices", "Lcoeff.pkl"), join(datadir, "cortices", "Rcoeff.pkl"))
+
 while True:
     ret, img = cap.read()
     if ret is True:
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         V = R.sample(img, fixation)
         tight = R.backproject_tight_last()
+        cimg = C.cort_img(V)
         
         cv2.namedWindow("inverted", cv2.WINDOW_AUTOSIZE)
         cv2.imshow("inverted", tight) 
         
+        cv2.namedWindow("input", cv2.WINDOW_AUTOSIZE)
         cv2.imshow("input", img) 
+        
+        cv2.namedWindow("cortical", cv2.WINDOW_AUTOSIZE)
+        cv2.imshow("cortical", cimg) 
         
         key = cv2.waitKey(10)
         

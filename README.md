@@ -15,5 +15,7 @@ A Python implementation of the software retina being developed by the CVAS team 
 
 ## Installation
 Navigate to the RetinaVision directory and run:
-	pip install -e .
+
+	*pip install -e .*
+
 If using Anaconda make sure to be inside the correct environment when installing.

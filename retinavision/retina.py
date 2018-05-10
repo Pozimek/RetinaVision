@@ -9,56 +9,9 @@ PhD retina. Object model and code cleanup.
 """
 
 import numpy as np
-import cPickle as pickle
+from utils import pad, loadPickle, project
 
 #TODO: do something about coeff being (1,X) in shape instead of (X)...
-#TODO: extract all auxilliary functions into a utils.py file
-#TODO: upload to private github, add to path
-def loadPickle(path):
-    with open(path, 'rb') as handle:
-        return pickle.load(handle)
-
-"""Pad an image with 0s from all sides for ez sampling"""
-#TODO: remove ALL rgb flags, automate checks, cleanup
-def pad(img, padding, nans=False, rgb=False):
-    size = (img.shape[0] + 2*padding, img.shape[1] + 2*padding)
-    if rgb:
-        s = list(size)
-        s.append(3L)
-        size = tuple(s)
-
-    out = np.zeros(size, dtype = img.dtype)    
-    if nans: out = np.full(size,np.nan)
-    if rgb: out[padding:-padding, padding:-padding, :] = img
-    else: out[padding:-padding, padding:-padding] = img
-    
-    return out  
-
-def ir(val):
-    """ Convenience function""" 
-    return int(round(val))
-
-def project(source, target, location):
-    """Project the source image onto the target image at the given location""" 
-    sh, sw = source.shape[:2]
-    th, tw = target.shape[:2]
-    
-    #target frame
-    y1 = max(0, ir(location[0] - sh/2.0))
-    y2 = min(th, ir(location[0] + sh/2.0))
-    x1 = max(0, ir(location[1] - sw/2.0))
-    x2 = min(tw, ir(location[1] + sw/2.0))
-    
-    #source frame
-    s_y1 = - ir(min(0, location[0] - sh/2.0 + 0.5))
-    s_y2 = s_y1 + (y2 - y1)
-    s_x1 = - ir(min(0, location[1] - sw/2.0 + 0.5))
-    s_x2 = s_x1 + (x2 - x1)
-    
-    target[y1:y2, x1:x2] += source[s_y1:s_y2, s_x1:s_x2]
-    
-    return target
-
 class Retina:
     def __init__(self):
         self.loc = 0
@@ -123,7 +76,7 @@ REMEMBER2: coeff is redundantly wrapped in another matrix for backwards compatib
         self._imsize = image.shape
         rgb = len(image.shape) == 3 and image.shape[-1] == 3
         p = self.width
-        pic = pad(image, p, True, rgb) #TODO: is this padding necessary?
+        pic = pad(image, p, True) #TODO: is this padding faster than calculating sampling windows?
         
         X = self.loc[:,0] + fix[1] + p
         Y = self.loc[:,1] + fix[0] + p
@@ -145,7 +98,7 @@ REMEMBER2: coeff is redundantly wrapped in another matrix for backwards compatib
             
             m = np.where(np.isnan(extract), 0, 1.0) #mask
             
-            if rgb: f = 1.0/np.sum(m*kernel, axis = (0,1))
+            if rgb: f = 1.0/np.sum(m*kernel, axis = (0,1)) #TODO fix invalid value warnings
             else: f = 1.0/np.sum(m*kernel)
             
             extract = np.nan_to_num(extract)
@@ -171,7 +124,7 @@ REMEMBER2: coeff is redundantly wrapped in another matrix for backwards compatib
         if rgb: I1 = np.zeros((m[0], m[1], 3))
         else: I1 = np.zeros(m)
         w = self.width
-        I1 = pad(I1, w, False, rgb)        
+        I1 = pad(I1, w, False)        
         I = np.zeros(m)
         
         for i in range(self.N-1,-1,-1):    
@@ -210,7 +163,7 @@ REMEMBER2: coeff is redundantly wrapped in another matrix for backwards compatib
             I1 = project(c*V[i], I1, self.loc[i,:2][::-1] + r)
     
         GI = self._gaussNormTight
-        if rgb: GI = np.dstack((GI,GI,GI))
+        if rgb: GI = np.dstack((GI,GI,GI)) #TODO: fix invalid value warnings
         I = np.uint8(np.divide(I1,GI)) 
         
         self._backprojTight = I
