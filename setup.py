@@ -23,6 +23,6 @@ setup(
     author_email = "piotrozimek9@gmail.com",
     description = ("An artificial software retina for deep learning purposes."),
     url = "",
-    packages=['retinavision', 'examples', 'tests'],
+    packages=['retinavision'],
     long_description=read('README.md')
 )
