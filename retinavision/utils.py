@@ -68,6 +68,9 @@ def loadPickleNonbin(path):
 def writePickle(path, obj):
     with open(path, 'wb') as handle:
         pickle.dump(obj, handle)
+        
+def normalize(V):
+    return V *(255/V.max())
 
 """Camera and visualisation functions""" 
 def camopen():
@@ -88,20 +91,18 @@ def camopen():
 def camclose(cap):
     cv2.destroyAllWindows()
     cap.release()
-    cv2.VideoCapture(-1).release()
-    cv2.VideoCapture(0).release()
 
-#Take a pic with the webcam
+#Take a pic with the webcam, return RGB!
 def snap():
     cap = camopen()
     ret, img = cap.read()
     camclose(cap)
     return bgr2rgb(img)
 
-def picshow(pic, size=(10,10)):    
+def picshow(pic, size=(10,10), cmap = 'gray'):    
     plt.figure(figsize=size)
     plt.axis('off')
-    plt.imshow(pic, interpolation='none', cmap='gray')
+    plt.imshow(pic, interpolation='none', cmap=cmap)
     plt.show()
     
 def scatter(X,Y, size=(10,10)):    
