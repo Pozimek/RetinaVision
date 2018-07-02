@@ -46,7 +46,8 @@ while True:
     if ret is True:
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         V = R.sample(img, fixation)
-        tight = R.backproject_tight_last()
+        #tight = R.backproject_tight_last()
+        tight = R.backproject_last()
         cimg = C.cort_img(V)
         
         cv2.namedWindow("inverted", cv2.WINDOW_AUTOSIZE)
