@@ -9,16 +9,18 @@ PhD retina. Object model and code cleanup.
 """
 
 import numpy as np
+from cuda_objects import CudaRetina
 from utils import pad, loadPickle, project
 
 #TODO: do something about coeff being (1,X) in shape instead of (X)...
 class Retina:
-    def __init__(self):
+    def __init__(self, gpu=True):
         self.loc = 0
         self.N = 0
         self.coeff = 0
         self.width = 0
-        
+
+        self._cudaRetina = CudaRetina() if gpu else None
         self._fixation = 0 #YX tuple
         self._imsize = 0
         self._gaussNorm = 0 #image
@@ -46,7 +48,7 @@ REMEMBER2: coeff is redundantly wrapped in another matrix for backwards compatib
         
     def loadCoeff(self, path):
         self.coeff = loadPickle(path)
-       
+
     def validate(self):
         assert(len(self.loc) == len(self.coeff[0]))
         if self._gaussNormTight is 0: self._normTight()
@@ -68,12 +70,30 @@ REMEMBER2: coeff is redundantly wrapped in another matrix for backwards compatib
         GI = np.zeros(shape[:2])
         GI = project(self._gaussNormTight, GI, fix)
         self._gaussNorm = GI
+        if self._cudaRetina:
+            self._cudaRetina.set_samplingfields(self.loc, self.coeff)
     
     def sample(self, image, fix):
         """Sample an image"""
         self.validate()
         self._fixation = fix
-        self._imsize = image.shape
+        # This will reset the image size only when it was changed.
+        if self._imsize != image.shape[:2]:
+            self._imsize = image.shape
+            if self._cudaRetina:
+                # TODO: helper function
+                self._cudaRetina.image_width = image.shape[1]
+                self._cudaRetina.image_height = image.shape[0]
+                self._cudaRetina.rgb = len(image.shape) == 3 and image.shape[-1] == 3
+                self._cudaRetina.center_x = fix[1]
+                self._cudaRetina.center_y = fix[0]
+                self._cudaRetina.set_gauss_norm(self._gaussNorm)
+
+        if self._cudaRetina:
+            V = self._cudaRetina.sample(image)
+            self._V = V
+            return V
+
         rgb = len(image.shape) == 3 and image.shape[-1] == 3
         p = self.width
         pic = pad(image, p, True) #TODO: is this padding faster than calculating sampling windows?
@@ -117,6 +137,16 @@ REMEMBER2: coeff is redundantly wrapped in another matrix for backwards compatib
         self.validate()
         if fix != self._normFixation or shape[:2] != self._gaussNorm.shape:
             self.prepare(shape, fix)
+            if self._cudaRetina:
+                # TODO: helper
+                self._cudaRetina.image_width = shape[1]
+                self._cudaRetina.image_height = shape[0]
+                self._cudaRetina.rgb = len(shape) == 3 and shape[-1] == 3
+                self._cudaRetina.center_x = fix[1]
+                self._cudaRetina.center_y = fix[0]
+                self._cudaRetina.set_gauss_norm(self._gaussNorm)
+        if self._cudaRetina:
+            return self._cudaRetina.backproject(V)
         
         rgb = len(shape) == 3 and shape[-1] == 3
         m = shape[:2]

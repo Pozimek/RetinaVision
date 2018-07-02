@@ -9,12 +9,13 @@ PhD Cortex - refactoring, object model
 """
 
 import numpy as np
+from cuda_objects import CudaCortex
 from retinavision.utils import loadPickleNonbin, project, loadPickle
 
 #TODO: overlapping hemifields?
 
 class Cortex:
-    def __init__(self):
+    def __init__(self, gpu=True):
         self.hemishape = 0 #matrix size of one cortical half (hemisphere)
         self.N = 0
         self.Rloc = 0
@@ -22,6 +23,7 @@ class Cortex:
         self.Lcoeff = 0
         self.Rcoeff = 0
         
+        self._cudaCortex = CudaCortex() if gpu else None
         self._V = 0 
         self._Lnorm = 0 
         self._Rnorm = 0 
@@ -61,7 +63,7 @@ class Cortex:
         Lwidth = int(np.abs(self.Lloc[:,0].max() + self.Lloc[:,6].max()/2.0))
         Rheight = int(np.abs(self.Rloc[:,1].max() + self.Rloc[:,6].max()/2.0))
         Lheight = int(np.abs(self.Lloc[:,1].max() + self.Lloc[:,6].max()/2.0))
-        
+
         self.hemishape = (max(Rheight, Lheight), max(Rwidth, Lwidth))
         #re-generate norm imgs only if new file loaded
         if self._normid != self._loadcount: self.cort_norm_img()
@@ -82,17 +84,27 @@ class Cortex:
             
             for i in range(n - 1,-1,-1):
                 nimg = project(coeff[0,i], nimg, loc[i,:2][::-1])
-        
+
+        if self._cudaCortex:
+            self._cudaCortex.set_cortex(self.Lloc, self.Rloc, self.Lcoeff, \
+                self.Rcoeff, L_norm, R_norm, self.hemishape)
+
         self.Lnorm, self.Rnorm = L_norm, R_norm
         self._normid = self._loadcount
     
     def cort_img(self, V):
         self.validate()
         self._V = V
+        rgb = len(V.shape) == 2
+        if self._cudaCortex:
+            self._cudaCortex.rgb = rgb
+            self.Limg = self._cudaCortex.cort_image_left(V)
+            self.Rimg = self._cudaCortex.cort_image_right(V)
+            self._image = np.concatenate((np.rot90(self.Limg,1), np.rot90(self.Rimg,-1)), axis=1)
+            return self._image
+
         cort_size = (self.hemishape[0], self.hemishape[1])
         Ln, Rn = self.Lnorm, self.Rnorm
-        
-        rgb = len(V.shape) == 2
         if rgb: 
             cort_size = (self.hemishape[0], self.hemishape[1], 3)
             Ln = np.dstack((self.Lnorm, self.Lnorm, self.Lnorm))
