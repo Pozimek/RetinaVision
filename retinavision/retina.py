@@ -13,7 +13,6 @@ from cuda_objects import CudaRetina
 from utils import pad, loadPickle, project
 
 #TODO: do something about coeff being (1,X) in shape instead of (X)...
-#TODO: a check in utils for whether CUDA is installed, print warnings if it isnt
 class Retina:
     def __init__(self, gpu=True):
         self.loc = 0

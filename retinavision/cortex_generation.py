@@ -14,6 +14,7 @@ from scipy.spatial.distance import cdist
 def LRsplit(loc):
     #TODO: Keep note jaggies fix
     """Split the receptive fields into two halves, left and right.
+    NOTE: this function needs retinal locs, not a raw tessellation!!
     [x, y, V_index]"""
     left, right = [], []            
     for i in range(len(loc)):
@@ -31,8 +32,7 @@ Returns R_loc and L_loc. Each node location is described with:
 #Major revisions:
 - extended output data structure.
 - target_d5 - desired min dist_5. Or mean, not sure which to use.
-- node_sigma and node_width inserted in cort_prep.
-- changed mean_d5 to 5th percentile (XXX)""" 
+- node_sigma and node_width inserted in cort_prep.""" 
 #TODO fix final jaggies, check for numeric accuracy of gaussian offsets and 
 #kernel centres because you cant find a solution to the issue elsewhere
 def cort_map(L, R, target_d5=1.0, alpha=15):
@@ -95,7 +95,7 @@ def cort_map(L, R, target_d5=1.0, alpha=15):
     #compute mean dist_5 for tighest 5 nodes
     d5 = np.append(L_loc[:,4], R_loc[:,4])
     sort_d5 = np.sort(d5)
-    mean_d5 = np.percentile(sort_d5[:5],5) #XXX: changed np.mean to np.percentile(a,5)
+    mean_d5 = np.mean(sort_d5[:5])
     
     #impose target mean dist_5 for tighest nodes
     L_loc[:,:2] *= (1.0/mean_d5)*target_d5
@@ -164,7 +164,7 @@ def cort_prepare(L_loc, R_loc, shrink=1.0, min_kernel=3, kernel_ratio = 4.0, sig
     #k_max more pixels of space from all sides for kernels to fit
     k_max = max(max(L_loc[:,6]), max(R_loc[:,6]))
     L_loc[:,:2] += k_max
-    R_loc[:,:2] += k_max
+    R_loc[:,:2] += k_max 
     
     #shrinking (avoid)
     L_loc[:,[0,1,4]] *= shrink
