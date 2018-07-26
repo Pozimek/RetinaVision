@@ -14,6 +14,8 @@ from retinavision.cortex import Cortex
 from retinavision import datadir, utils
 from os.path import join
 
+#TODO: github changes line endings inside the .pkl files, making them incompatible
+#1. Fuck github 2. find a workaround
 
 #Open webcam
 cap = utils.camopen() #cap is the capture object (global)

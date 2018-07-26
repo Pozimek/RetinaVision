@@ -10,7 +10,7 @@ PhD Cortex - refactoring, object model
 
 import numpy as np
 from cuda_objects import CudaCortex
-from retinavision.utils import loadPickleNonbin, project, loadPickle
+from retinavision.utils import loadPickleNonbin, project
 
 #TODO: overlapping hemifields?
 
@@ -44,8 +44,8 @@ class Cortex:
         self.validate()
     
     def loadCoeffs(self, leftpath, rightpath):
-        self.Rcoeff = loadPickle(rightpath)
-        self.Lcoeff = loadPickle(leftpath)
+        self.Rcoeff = loadPickleNonbin(rightpath)
+        self.Lcoeff = loadPickleNonbin(leftpath)
         self._loadcount += 1
         self.validate()
     
