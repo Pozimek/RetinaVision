@@ -7,14 +7,11 @@ Barebones camera demo showcasing the use of the newest retina codes
 
 @author: Piotr Ozimek
 """
-
-import matplotlib.pyplot as plt
 import cv2
 import numpy as np
 from retinavision.retina import Retina
 from retinavision.cortex import Cortex
 from retinavision import datadir, utils
-import cPickle as pickle
 from os.path import join
 
 
@@ -36,10 +33,10 @@ R.prepare(campic.shape, fixation)
 
 #Create and prepare cortex
 C = Cortex()
-lp = join(datadir, "cortices", "Ll.pkl")
-rp = join(datadir, "cortices", "Rl.pkl")
+lp = join(datadir, "cortices", "50k_Lloc_tight.pkl")
+rp = join(datadir, "cortices", "50k_Rloc_tight.pkl")
 C.loadLocs(lp, rp)
-C.loadCoeffs(join(datadir, "cortices", "Lcoeff.pkl"), join(datadir, "cortices", "Rcoeff.pkl"))
+C.loadCoeffs(join(datadir, "cortices", "50k_Lcoeff_tight.pkl"), join(datadir, "cortices", "50k_Rcoeff_tight.pkl"))
 
 while True:
     ret, img = cap.read()

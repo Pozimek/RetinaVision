@@ -25,8 +25,8 @@ class Cortex:
         
         self._cudaCortex = CudaCortex() if gpu else None
         self._V = 0 
-        self._Lnorm = 0 
-        self._Rnorm = 0 
+        self.Lnorm = 0 
+        self.Rnorm = 0 
         self._Limg = 0
         self._Rimg = 0
         self._image = 0 
