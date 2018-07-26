@@ -153,7 +153,7 @@ def rf_ozimek(tessellation, kernel_ratio, sigma_base, sigma_power, mean_rf, min_
     #compute min dist_5 for most central 20 nodes
     fov_dist_5 = np.min(dist_5[:20])
     
-    #set fov_dist_5 to mean_rf (impose mean_rf parameter)
+    #set fov_dist_5 to mean_rf (impose mean_rf parameter) @TODO: this is MIN not MEAN, fix headings
     rf_loc[:,:2] = tessellation*(1/fov_dist_5)*mean_rf
     
     #Adjust dist_5 to reflect new scale
@@ -198,7 +198,7 @@ def rf_ozimek(tessellation, kernel_ratio, sigma_base, sigma_power, mean_rf, min_
         rf_coeff[0,i] = gausskernel(k_width, loc, rf_loc[i,5])
         rf_coeff[0,i] /= np.sum(rf_coeff[0,i]) ###NORMALIZATION
     
-    return rf_loc, rf_coeff
+    return rf_loc, rf_coeff, fov_dist_5
 
 
 """

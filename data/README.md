@@ -1,8 +1,6 @@
 # Data files
-Currently the only retina available has 50,000 nodes. 
+Currently the only retinas available have 50,000 nodes (930x930px) and 8,000 nodes (~260x260px).
 
-##Retina
-Use ret50k_loc, ret50k_coeff.
-
+#50K 
 ##Cortex
-Use Ll, Rl, Lcoeff, Rcoeff.
+Two cortices are available. Use the _tight version (bugfix, better compression).
