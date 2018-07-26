@@ -11,7 +11,7 @@ A Python implementation of the software retina being developed by the CVAS team 
 	Python 2.7
 	cPickle
 	opencv (for running examples only, might be replaced by imageio soon)
-	[CUDA](https://docs.nvidia.com/cuda/cuda-quick-start-guide/index.html)
+	CUDA
 	
 
 ## Installation
@@ -20,3 +20,4 @@ After installing all of the requirements, navigate to the RetinaVision directory
 	pip install -e .
 
 If using Anaconda make sure to be inside the correct environment when installing.
+For your convenience, [here are the instructions on how to install CUDA](https://docs.nvidia.com/cuda/cuda-quick-start-guide/index.html).
