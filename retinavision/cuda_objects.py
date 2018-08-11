@@ -4,7 +4,7 @@ Python objects, serving as proxies to the main classes.
 """
 import sys
 import numpy as np
-from os import path
+from os import chdir, getcwd, path, listdir
 np.seterr(divide='ignore', invalid='ignore')
 
 import ctypes
@@ -12,8 +12,13 @@ import ctypes
 if sys.platform.startswith('linux'):
     lib = ctypes.cdll.LoadLibrary(path.join(path.dirname(path.dirname(__file__)), 'bin/Linux/libRetinaCUDA.so'))
 elif sys.platform.startswith('win'):
-    lib = ctypes.cdll.LoadLibrary(path.join(path.dirname(path.dirname(__file__)),'bin\\Windows\\RetinaCUDA.dll'))
-
+    curr_loc = getcwd()
+    dll_loc = path.join(path.dirname(path.dirname(__file__)),'bin\\Windows')
+    # Changing the directory to the dll's location is needed to find dependent dlls
+    chdir(dll_loc)
+    lib = ctypes.cdll.LoadLibrary('RetinaCUDA.dll')
+    # Switch back
+    chdir(curr_loc)
 
 def convert_from_gpu(rgb_image_vector):
     '''
