@@ -21,3 +21,7 @@ After installing all of the requirements, navigate to the RetinaVision directory
 
 If using Anaconda make sure to be inside the correct environment when installing.
 For your convenience, [here are the instructions on how to install CUDA](https://docs.nvidia.com/cuda/cuda-quick-start-guide/index.html).
+
+Windows might block the RetinaCUDA.dll (unindentified developer). 
+If this happens, try enabling the dll in it's properties. If the dll still 
+cannot be loaded, run the scripts in a terminal with administrator privileges.
