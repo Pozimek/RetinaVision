@@ -1,9 +1,10 @@
-#!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
 Created on 26/04/2018
 
-Barebones camera demo showcasing the use of the newest retina codes
+Barebones camera demo of the retina codes
+
+Now compatible with Python 3.
 
 @author: Piotr Ozimek
 """
@@ -13,9 +14,6 @@ from retinavision.retina import Retina
 from retinavision.cortex import Cortex
 from retinavision import datadir, utils
 from os.path import join
-
-#TODO: github changes line endings inside the .pkl files, making them incompatible
-#1. Fuck github 2. find a workaround
 
 #Open webcam
 cap = utils.camopen() #cap is the capture object (global)
@@ -56,12 +54,12 @@ while True:
         cv2.imshow("input", img) 
         
         cv2.namedWindow("cortical", cv2.WINDOW_AUTOSIZE)
-        cv2.imshow("cortical", cimg) 
+        cv2.imshow("cortical", cimg)
         
         key = cv2.waitKey(10)
         
         if key == 43: #+
-            print ''
+            print('')
 #        elif key == 45: #-
 #            print ''
 #        elif key == 97: #a

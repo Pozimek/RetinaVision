@@ -27,7 +27,7 @@ def convert_from_gpu(rgb_image_vector):
     rgb_image_vector : np.ndarray
         image vector shaped [retina_size, 3]
     '''
-    retina_size = len(rgb_image_vector) / 3
+    retina_size = int(len(rgb_image_vector) / 3)
     return np.hstack(\
         (np.resize(rgb_image_vector[0:retina_size], (retina_size,1)),\
         np.resize(rgb_image_vector[retina_size:2*retina_size], (retina_size,1)), \
@@ -200,7 +200,7 @@ class CudaRetina(object):
             kernels of the sampling
         '''
         if loc.shape[0] != len(coeff.flatten()):
-            print "Number of locs and coeffs must be the same"
+            print("Number of locs and coeffs must be the same")
             return
         loc1D = loc.flatten()
         coeff1D = []
@@ -398,7 +398,7 @@ class CudaCortex(object):
 
     def set_cortex(self, Lloc, Rloc, Lcoeff, Rcoeff, Lnorm, Rnorm, hemishape):
         if Lloc.shape[0] != len(Lcoeff.flatten()):
-            print "Number of Llocs and Lcoeffs must be the same"
+            print("Number of Llocs and Lcoeffs must be the same")
             return
         Lloc1D = Lloc.flatten()
         Lcoeff1D = []
@@ -410,7 +410,7 @@ class CudaCortex(object):
         self.resolveError(err)
 
         if Rloc.shape[0] != len(Rcoeff.flatten()):
-            print "Number of Llocs and Lcoeffs must be the same"
+            print("Number of Llocs and Lcoeffs must be the same")
             return
         Rloc1D = Rloc.flatten()
         Rcoeff1D = []

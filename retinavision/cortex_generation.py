@@ -3,12 +3,16 @@
 """
 Created on Tue May 01 00:28:22 2018
 Cortex creation functions
+
+Not tested on py3, not likely to work correctly.
+TODO: py3
 @author: Piotr Ozimek
 """
 import numpy as np
 from numpy.linalg import norm
 import math
 from scipy.spatial.distance import cdist
+from retinavision.utils import tessplot
 
     
 def LRsplit(loc):
@@ -18,7 +22,7 @@ def LRsplit(loc):
     left, right = [], []            
     for i in range(len(loc)):
         entry = np.append(loc[i,:2], [i])
-        #TODO 2 overlapping halves, ideally overlap is in its own set?
+        #TODO 2 overlapping halves, ideally overlap is in its own data structure?
         if loc[i,0] < 0: left.append(entry)
         else: right.append(entry)
 
@@ -33,9 +37,7 @@ Returns R_loc and L_loc. Each node location is described with:
 - target_d5 - desired min dist_5. Or mean, not sure which to use.
 - node_sigma and node_width inserted in cort_prep.
 - changed mean_d5 to 5th percentile (XXX)""" 
-#TODO fix final jaggies, check for numeric accuracy of gaussian offsets and 
-#kernel centres because you cant find a solution to the issue elsewhere
-def cort_map(L, R, target_d5=1.0, alpha=15):
+def cort_map(L, R, target_d5=1.0, alpha=15, v=False):
     """Given raw left and right hemifields, compute the cortical map """
     #compute cortical coordinates
     #TODO: loop over left and right, or impossible?
@@ -77,8 +79,8 @@ def cort_map(L, R, target_d5=1.0, alpha=15):
     
     #set dist_5
     ##workload split into chunks due to cdist exhausting RAM
-    #TODO: refactor into aux fn
-    print "Computing Gaussian interpolation fields..."
+    #TODO: replace with utils.cdist_torch
+    print("Computing Gaussian interpolation fields...")
     for loc in [L_loc, R_loc]:
         length = len(loc)
         chunk = 5000
@@ -86,7 +88,7 @@ def cort_map(L, R, target_d5=1.0, alpha=15):
         
         dist_5 = np.zeros(length, dtype='float64')
         for j in range(num):
-            print "Processing chunk " + str(j)
+            print("Processing chunk " + str(j))
             s = np.sort(cdist( loc[j*chunk : (j+1)*chunk,:2], loc[:,:2]))
             dist_5[j*chunk:(j+1)*chunk] = np.mean(s[:,1:6], 1)
         
@@ -107,7 +109,9 @@ def cort_map(L, R, target_d5=1.0, alpha=15):
     
     return L_loc, R_loc
 
-def cort_prepare(L_loc, R_loc, shrink=1.0, min_kernel=3, kernel_ratio = 4.0, sigma_base = 1.0):
+def cort_prepare(Lloc, Rloc, shrink=1.0, min_kernel=3, kernel_ratio = 4.0, sigma_base = 1.0, v=False):
+    L_loc = Lloc
+    R_loc = Rloc
     #Set sigmas
     L_loc[:,5] = sigma_base * L_loc[:,4]
     R_loc[:,5] = sigma_base * R_loc[:,4]
@@ -125,7 +129,7 @@ def cort_prepare(L_loc, R_loc, shrink=1.0, min_kernel=3, kernel_ratio = 4.0, sig
     L_coeff = np.ndarray((1, len(L_loc)),dtype='object')
     R_coeff = np.ndarray((1, len(R_loc)),dtype='object')
     coeffs = [L_coeff, R_coeff]
-
+    if v: tessplot(R_loc)
     locs = [L_loc, R_loc]    
     for j in range(len(locs)):
         loc = locs[j]
@@ -149,7 +153,7 @@ def cort_prepare(L_loc, R_loc, shrink=1.0, min_kernel=3, kernel_ratio = 4.0, sig
             #place proper gaussian in coeff[i]
             coeff[0,i] = gausskernel(k_width, rloc, loc[i,5])
             coeff[0,i] /= np.sum(coeff[0,i]) #normalization
-    
+    if v: tessplot(R_loc)
     ###############
     
     #bring min(x) to 0

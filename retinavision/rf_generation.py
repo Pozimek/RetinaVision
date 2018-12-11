@@ -7,9 +7,6 @@ wilsonretina5fine_8192s.m
 
 @author: Piotr Ozimek
 """
-#import sys
-#sys.path.append('C:\Users\walsie\RETINA\python')
-
 import numpy as np
 from scipy.spatial import distance
 
@@ -114,9 +111,9 @@ def rf_sumitha(tessellation, min_rf, sigma_ratio, sigma):
 """ Completed function (I hope)
 New rf gen function. New features + striving to maintain backwards compatibility
 Params:
-@tessellation is the raw node locations [x,y] array (currently produced in matlab)
+@tessellation is the raw node locations [x,y] array
 @kernel_ratio is the ratio of kernel to local node density (dist_5)
-@sigma_base is the base sigma, or global sigma scaling factor
+@sigma_base is the base sigma, or global sigma scaling factor (lambda)
 @sigma_power is the power term applied to sigma scaling with eccentricity
 @mean_rf sets the mean distance between the 20 most central nodes
 @min_kernel imposes a minimum kernel width for the receptive fields (def: 3)
@@ -132,7 +129,7 @@ def rf_ozimek(tessellation, kernel_ratio, sigma_base, sigma_power, mean_rf, min_
     
     neighbourhood = 6 #5 closest nodes
     
-    print "rf generation - might take a while..."    
+    print("rf generation - might take a while...")
     
     #compute node density metric dist_5
     ##Break up cdist matrix into smaller pieces so they fit in ram
@@ -143,9 +140,9 @@ def rf_ozimek(tessellation, kernel_ratio, sigma_base, sigma_power, mean_rf, min_
         num += 1
     
     dist_5 = np.zeros(length, dtype='float64')
-    print str(chunk) + " nodes in one chunk."
+    print(str(chunk) + " nodes in one chunk.")
     for i in range(num):
-        print "Processing chunk " + str(i)
+        print("Processing chunk " + str(i))
         d = distance.cdist(tessellation[i*chunk:(i+1)*chunk], tessellation)
         s = np.sort(d)
         dist_5[i*chunk:(i+1)*chunk] = np.mean(s[:,1:neighbourhood], 1)
@@ -165,7 +162,7 @@ def rf_ozimek(tessellation, kernel_ratio, sigma_base, sigma_power, mean_rf, min_
     #Insert dist_5 to [4]
     rf_loc[:,4] = dist_5
 
-    print "All chunks done."
+    print("All chunks done.")
     
     ##determine sigmas
     #sigma_power decreases sigma if dist_5 < 1.0, so correct it

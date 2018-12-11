@@ -9,8 +9,8 @@ PhD retina. Object model and code cleanup.
 """
 
 import numpy as np
-from cuda_objects import CudaRetina
-from utils import pad, loadPickle, project
+from .cuda_objects import CudaRetina
+from .utils import pad, loadPickle, project, loadPickleNonbin
 
 #TODO: do something about coeff being (1,X) in shape instead of (X)...
 #TODO: a check in utils for whether CUDA is installed, print warnings if it isnt
@@ -32,7 +32,7 @@ class Retina:
         self._backprojTight = 0 #image
         
     def info(self):
-        print "loc - an Nx7 array containing retinal nodes defined as follows:\n\
+        print("loc - an Nx7 array containing retinal nodes defined as follows:\n\
     [x, y, d, angle (radians), dist_5, rf_sigma, rf_width]\n\
 coeff - an array of variable size gaussian receptive field kernels\n\
 V - the imagevector, output of retinal sampling\n\
@@ -40,12 +40,22 @@ gaussNorm - Gaussian normalization image for producing backprojections\n\
 \n\
 REMEMBER: all coordinates are tuples in the Y,X order, not X,Y.\n\
 The only exception is the loc array\n\
-REMEMBER2: coeff is redundantly wrapped in another matrix for backwards compatibility" 
+REMEMBER2: coeff is redundantly wrapped in another matrix for backwards compatibility")
     
+    def loadLocNB(self, path):
+        print("This function should not be needed anymore! If a file still requires it, contact Piotr.")
+        self.loc = loadPickleNonbin(path)
+        self.N = len(self.loc)
+        self.width = 2*int(np.abs(self.loc[:,:2]).max() + self.loc[:,6].max()/2.0)
+        
     def loadLoc(self, path):
         self.loc = loadPickle(path)
         self.N = len(self.loc)
         self.width = 2*int(np.abs(self.loc[:,:2]).max() + self.loc[:,6].max()/2.0)
+        
+    def loadCoeffNB(self, path):
+        print("This function should not be needed anymore! If a file still requires it, contact Piotr.")
+        self.coeff = loadPickleNonbin(path)
         
     def loadCoeff(self, path):
         self.coeff = loadPickle(path)
@@ -65,6 +75,7 @@ REMEMBER2: coeff is redundantly wrapped in another matrix for backwards compatib
         
     def prepare(self, shape, fix):
         """Pre-compute fixation specific Gaussian normalization image """
+        fix = (int(fix[0]), int(fix[1]))
         self.validate()
         self._normFixation = fix
         
@@ -76,6 +87,7 @@ REMEMBER2: coeff is redundantly wrapped in another matrix for backwards compatib
     
     def sample(self, image, fix):
         """Sample an image"""
+        fix = (int(fix[0]), int(fix[1]))
         self.validate()
         self._fixation = fix
         # This will reset the image size only when it was changed.
@@ -86,8 +98,8 @@ REMEMBER2: coeff is redundantly wrapped in another matrix for backwards compatib
                 self._cudaRetina.image_width = image.shape[1]
                 self._cudaRetina.image_height = image.shape[0]
                 self._cudaRetina.rgb = len(image.shape) == 3 and image.shape[-1] == 3
-                self._cudaRetina.center_x = fix[1]
-                self._cudaRetina.center_y = fix[0]
+                self._cudaRetina.center_x = int(fix[1])
+                self._cudaRetina.center_y = int(fix[0])
                 self._cudaRetina.set_gauss_norm(self._gaussNorm)
 
         if self._cudaRetina:
@@ -129,14 +141,16 @@ REMEMBER2: coeff is redundantly wrapped in another matrix for backwards compatib
         self._V = V
         return V
     
-    def backproject_last(self):
-        return self.backproject(self._V, self._imsize, self._fixation)
+    def backproject_last(self, n = True):
+        return self.backproject(self._V, self._imsize, self._fixation, normalize=n)
     
-    def backproject(self, V, shape, fix):
+    def backproject(self, V, shape, fix, normalize=True):
         """Backproject the image vector onto a blank matrix equal in size to
          the input image"""
+        #TODO: Pyramid requires skipping uint8 cast, which is deeply integrated into GPU codes
+        fix = (int(fix[0]), int(fix[1]))
         self.validate()
-        if fix != self._normFixation or shape[:2] != self._gaussNorm.shape:
+        if fix != self._normFixation or shape[:2] != self._gaussNorm.shape: 
             self.prepare(shape, fix)
             if self._cudaRetina:
                 # TODO: helper
@@ -147,6 +161,8 @@ REMEMBER2: coeff is redundantly wrapped in another matrix for backwards compatib
                 self._cudaRetina.center_y = fix[0]
                 self._cudaRetina.set_gauss_norm(self._gaussNorm)
         if self._cudaRetina:
+            if not normalize: self._cudaRetina.set_gauss_norm(np.ones_like(self._gaussNorm))
+            else: self._cudaRetina.set_gauss_norm(self._gaussNorm)
             return self._cudaRetina.backproject(V)
         
         rgb = len(shape) == 3 and shape[-1] == 3
@@ -154,29 +170,29 @@ REMEMBER2: coeff is redundantly wrapped in another matrix for backwards compatib
         
         if rgb: I1 = np.zeros((m[0], m[1], 3))
         else: I1 = np.zeros(m)
-        w = self.width
-        I1 = pad(I1, w, False)        
-        I = np.zeros(m)
+        #w = self.width
+        #I1 = pad(I1, w, False)        
         
         for i in range(self.N-1,-1,-1):    
             c = self.coeff[0, i]
             if rgb: c = np.dstack((c,c,c))
-            
-            I1 = project(c*V[i], I1, self.loc[i,:2][::-1] + fix + w)
+            location = self.loc[i,:2][::-1] + fix
+            if (location > (0, 0)).all() and (location < I1.shape).all():
+                I1 = project(c*V[i], I1, location)
         
-        I1 = I1[w:-w, w:-w]
         GI = self._gaussNorm
         if rgb: GI = np.dstack((GI,GI,GI))
-        I = np.uint8(np.divide(I1,GI)) 
+        if normalize: I1 = np.uint8(np.true_divide(I1,GI)) 
         
-        self._backproj = I
-        return I
+        self._backproj = I1
+        return I1
     
     def backproject_tight_last(self):
         return self.backproject_tight(self._V, self._imsize, self._fixation)
     
     def backproject_tight(self, V, shape, fix):
         """Produce a tight-fitted backprojection (width x width, lens only)"""
+        fix = (int(fix[0]), int(fix[1]))
         #TODO: look at the weird artifacts at edges when the lens is too big for the frame. Might be a small bug
         self.validate()
         rgb = len(shape) == 3 and shape[-1] == 3
@@ -195,7 +211,7 @@ REMEMBER2: coeff is redundantly wrapped in another matrix for backwards compatib
     
         GI = self._gaussNormTight
         if rgb: GI = np.dstack((GI,GI,GI)) #TODO: fix invalid value warnings
-        I = np.uint8(np.divide(I1,GI)) 
+        I = np.uint8(np.true_divide(I1,GI)) 
         
         self._backprojTight = I
         return I

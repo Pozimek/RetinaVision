@@ -9,8 +9,8 @@ PhD Cortex - refactoring, object model
 """
 
 import numpy as np
-from cuda_objects import CudaCortex
-from retinavision.utils import loadPickleNonbin, project
+from .cuda_objects import CudaCortex
+from .utils import loadPickle, project
 
 #TODO: overlapping hemifields?
 
@@ -26,7 +26,7 @@ class Cortex:
         self._cudaCortex = CudaCortex() if gpu else None
         self._V = 0 
         self.Lnorm = 0 
-        self.Rnorm = 0 
+        self.Rnorm = 0
         self._Limg = 0
         self._Rimg = 0
         self._image = 0 
@@ -34,18 +34,18 @@ class Cortex:
         self._normid = 0 #id of normalizatio images
         
     def info(self):
-        print "Rloc, Lloc - Nx7 arrays defined as follows:\n"\
-            "[x (theta), y(d), imagevector_index, 0, dist_5, kernel_sigma, kernel_width]"
+        print("Rloc, Lloc - Nx7 arrays defined as follows:\n"\
+            "[x (theta), y(d), imagevector_index, 0, dist_5, kernel_sigma, kernel_width]")
        
     def loadLocs(self, leftpath, rightpath):
-        self.Rloc = loadPickleNonbin(rightpath)
-        self.Lloc = loadPickleNonbin(leftpath)
+        self.Rloc = loadPickle(rightpath)
+        self.Lloc = loadPickle(leftpath)
         self._loadcount += 1
         self.validate()
     
     def loadCoeffs(self, leftpath, rightpath):
-        self.Rcoeff = loadPickleNonbin(rightpath)
-        self.Lcoeff = loadPickleNonbin(leftpath)
+        self.Rcoeff = loadPickle(rightpath)
+        self.Lcoeff = loadPickle(leftpath)
         self._loadcount += 1
         self.validate()
     
