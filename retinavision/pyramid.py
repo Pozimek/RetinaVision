@@ -363,24 +363,34 @@ def posneg(im):
 
 LoG_N = Gpyramid_norm(LoG_P, R)
 for i in range(len(LoG_N)): 
-    utils.picshow(LoG_N[i])
+    utils.picshow(N[i])
 
 
 LoG_PV = PV2 - PV #vis_true
 LoG_PV2 = Gpyramid(LoG_P, V) #vis_true2
-LoG_vis_true = Gpyramid_backproject(LoG_P, LoG_PV, R, LoG_N, n=False)
-LoG_vis_true2 = Gpyramid_backproject(LoG_P, LoG_PV2, R, LoG_N, n=False)
+LoG_vis_true = Gpyramid_backproject(P, LoG_PV, R, N, n=False)
+LoG_vis_true2 = Gpyramid_backproject(P, LoG_PV2, R, N, n=False)
 #TODO1: the two ways of obtaining log_PV do not yield the same results.
 
+"""
+So the approach from LoG_PV is correct, and the backprojection should be
+casted through and normalized by the narrow pyramid to generate the proper
+visualisation (splatting after all) - as doing so through a DoG would re-construct
+the laplace pattern instead of showing where the activations actually happen.
+
+A good test for the pyramid is the spatial frequency human vision test. 
+File test2.jpg in images - construct an image like that for your test, sample with 
+pyramid/retina for good evaluations and include in paper.
+"""
 
 #visualize LoG pyramid
 print("LoG pyramid (below)")
 for i in [0,1,2]:
-    A = LoG_vis_true2[i]
-    B = LoG_N[i]
-    im = np.uint8(np.true_divide(A, B))
+    A = -LoG_vis_true2[i]
+    B = N[i]
+    im = np.true_divide(A, B) +128
     utils.picshow(im, size=(15,15))
-    print(im.max(), im.min(), len(np.unique(im)))
+    print(A.max(), A.min(), len(np.unique(A)))
 print("LoG pyramid (above)")
 
 
