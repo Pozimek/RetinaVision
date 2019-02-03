@@ -8,7 +8,7 @@ A Python implementation of the software retina being developed by the CVAS team 
 	Pip
 	Numpy
 	Scipy
-	Python 2.7
+	Python 3.6 (2.7 no longer supported)
 	cPickle
 	opencv (for running examples only, might be replaced by imageio soon)
 	CUDA

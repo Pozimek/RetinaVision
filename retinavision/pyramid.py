@@ -11,7 +11,25 @@ from retinavision.retina import Retina
 from retinavision import datadir, utils
 import cv2
 import numpy as np
-from copy import deepcopy
+
+"""
+03.02.2019 refactor plan
+- Pyramid class:
+    - validation function
+    - separate DoG class that contains 2 pyramid classes?
+    - building functions?
+Extensions:
+    - extrema detection 
+    - ->corners
+
+- so, uh, was/is objectify() needed?
+- parameter investigations 
+    sumitha's: lambda 1:L0, 1.7...:L123 (?)
+    'cortical color constancy model' params (lambda = 4)
+- validate on GPU
+
+"""
+
 
 class Pyramid:  
     #TODO: convert Coefficients into numpy object arrays!
@@ -46,10 +64,11 @@ class Pyramid:
     
     def info(self):
         print("Tessellations, coefficients and normalization maps are all\n\
-              stored as arrays of np.arrays. Starting from Level 0 (retina)\n\
-              for the tessellations and from L01 for the coefficients and \n\
-              norm_maps variables. This means that the retinal coefficients\n\
-              and the retina normalization image are only stored inside the retina variable.")
+          stored as arrays of np.arrays. Starting from Level 0 (retina)\n\
+          for the tessellations and from L01 for the coefficients and \n\
+          norm_maps variables. This means that the retinal coefficients\n\
+          and the retina normalization image are only stored inside the\n\
+          retina variable.")
     
     """Core sampling/pyramidizing function"""
     def sample(self, img, fixation, P):
@@ -77,7 +96,8 @@ class Pyramid:
         return PV
     
     def backproject_last(self):
-        out = self.Gpyramid_backproject(self.PV, self.retina._imsize, self.retina._fixation)
+        out = self.Gpyramid_backproject(self.PV, self.retina._imsize, 
+                                        self.retina._fixation)
         return out    
     
     def backproject(self, PV, shape, fixation):
@@ -126,7 +146,7 @@ def Gpyramid_coeffs(L0, L1, sigma_factor, rf_fov):
     L1_coeff = np.ndarray((len(L1)),dtype='object')
     
     #cdist
-    DIST10 = utils.cdist_torch(L0, L1).numpy() #distances between the two levels
+    DIST10 = utils.cdist_torch(L0, L1).numpy() #distances between two levels
     DIST1 = utils.cdist_torch(L1, L1).numpy() #distances within L1
     
     dist_5 = np.mean(np.sort(DIST1)[:,1:6], axis=1)
@@ -249,7 +269,7 @@ def Gpyramid_backproject(P, PV, R, N, n=True):
 #
 
 #Load tessellations levels
-pyr_path = join(datadir,"retinas","pyramid-4")
+pyr_path = join(datadir,"pyramid")
 levels = ['50k_truetess.pkl', 'tess12k5.pkl', 'tess3125.pkl', 'tess781.pkl']
 
 L0 = utils.loadPickle(join(pyr_path, levels[0]))
@@ -264,7 +284,7 @@ R.loadCoeff(join(datadir, "retinas", "ret50k_coeff.pkl"))
 
 #impath = "D:\\RETINA\\images\\Harmony_of_Dragons.jpg"
 #impath = "D:\\RETINA\\images\\TEST.png"
-impath = "D:\\RETINA\\images\\staircase.jpg"
+impath = "D:\\RETINA\\images\\original.png"
 img = np.float64(cv2.imread(impath, 0))
 x = img.shape[1]/2
 y = img.shape[0]/2
@@ -273,7 +293,7 @@ fixation = (y,x)
 R.prepare(img.shape, fixation)
 V = R.sample(img, fixation)
 backproj = np.true_divide(R.backproject_last(n=False),R._gaussNorm)
-utils.picshow(np.uint8(backproj), size=(15,15))
+utils.picshow(np.uint8(backproj), size=(10,10))
 
 #Multiply up coarser tessellations Dmin to make them same scale as tess50k
 d5 = 0.0021888014007064422 #fov_dist_5 from the raw 50k node tess
@@ -285,7 +305,6 @@ L3 *= mean_rf/d5
 
 L = [L0, L1, L2, L3]
 
-#
 #Sumitha's approach is to use lambda as k_width
 lambda1 = 1.7321 #sumitha's lambda, w/ retina layer = 1
 lambda2 = 1.6 * lambda1 #wider rfs
@@ -293,18 +312,31 @@ lambdaB = 0.5 * lambda1 #possibly 'your' lambda, w/ retinal layer = 0.5
 rffov = 2.4 #k_ratio
 
 #P = Gpyramid_build(L, lambda1, rffov) #narrow
+#N = Gpyramid_norm(P, R)
+#utils.writePickle(join(pyr_path, "50K_pyr_narrow_coeffs.pkl"), P["Coefficients"])
+#utils.writePickle(join(pyr_path, "50K_pyr_narrow_normmaps.pkl"), N)
+#utils.writePickle(join(pyr_path,"50K_pyr_narrow_tessellations.pkl"), L)
+
+#P2 = Gpyramid_build(L, lambda2, rffov) #wide
+#N2 = Gpyramid_norm(P2, R)
+#utils.writePickle(join(pyr_path, "50K_pyr_wide_coeffs.pkl"), P2["Coefficients"])
+##utils.writePickle(join(pyr_path, "50K_pyr_wide_normmaps.pkl"), N2)
+#utils.writePickle(join(pyr_path,"50K_pyr_wide_tessellations.pkl"), P2["Tessellations"])
+
 P = {}
-L = utils.loadPickle(join(pyr_path,"50K_pyr_narrow_tessellations.pkl"))
+L = utils.loadPickle(join(pyr_path, "50K_pyr_narrow_tessellations.pkl"))
 P["Tessellations"] = L
 P['Coefficients'] = utils.loadPickle(join(pyr_path, "50K_pyr_narrow_coeffs.pkl"))
-N = Gpyramid_norm(P, R)
+N = utils.loadPickle(join(pyr_path, "50K_pyr_narrow_normmaps.pkl"))
 
-PV = Gpyramid(P, V)
+P2 = {}
+L2 = utils.loadPickle(join(pyr_path, "50K_pyr_wide_tessellations.pkl"))
+P2["Tessellations"] = L2
+P2['Coefficients'] = utils.loadPickle(join(pyr_path, "50K_pyr_wide_coeffs.pkl"))
+N2 = utils.loadPickle(join(pyr_path, "50K_pyr_wide_normmaps.pkl"))
 
-P2 = Gpyramid_build(L, lambda2, rffov)
-N2 = Gpyramid_norm(P2, R)
-
-PV2 = Gpyramid(P2, V)
+PV = Gpyramid(P, V) #narrow
+PV2 = Gpyramid(P2, V) #wide
 
 vistrue = Gpyramid_backproject(P, PV, R, N, n=False)
 visnorm = Gpyramid_backproject(P, PV, R, N)
@@ -312,64 +344,12 @@ visnorm = Gpyramid_backproject(P, PV, R, N)
 vistrue2 = Gpyramid_backproject(P2, PV2, R, N2, n=False)
 visnorm2 = Gpyramid_backproject(P2, PV2, R, N2)
 
-""" FRONTIERS: 3 diagrams (chop up)"""
-
 #utils.writePickle(join(pyr_path, "50K_pyr_narrow_coeffs.pkl"), P["Coefficients"])
 #utils.writePickle(join(pyr_path, "50K_pyr_narrow_normmaps.pkl"), N)
 #utils.writePickle(join(pyr_path,"50K_pyr_narrow_tessellations.pkl"), L)
 
-"""What do i do: 
-    generate norm maps from a LoG pyramid, or subtract G_norm maps
-    subtract imagevectors or just subtract un/normalized backprojections?
-    TBH backprojection is expensive so subtracting PVs will be best
-    and maybe generating the norm map, but that's for later
- """
- 
-#Converting to numpy obj array (actually turned out useless)
-def objectify(coeffs):
-    new_coeff = np.ndarray(len(coeffs), dtype='object')
-    new_coeff[:] = coeffs
-    for i in range(len(new_coeff)):
-        for j in range(len(new_coeff[i])):
-            tup = new_coeff[i][j]
-            new_coeff[i][j] = np.ndarray(2, dtype='object')
-            new_coeff[i][j][:] = [tup[0],tup[1]]
-            
-    return new_coeff
-
-P['Coefficients'] = objectify(P['Coefficients'])
-
-#LoG
-#Produce LoG coeffs. Due to, uh, my data structure, it needs a loop
-LoG_coeffs = deepcopy(P["Coefficients"]) #copy to keep indices
-for L in range(len(P["Coefficients"])):
-    for node in range(len(P["Coefficients"][L])):
-        narrow = P["Coefficients"][L][node][1]
-        wide = P2["Coefficients"][L][node][1]
-        Cnew = (wide - narrow)
-        Cnew /= np.sum(Cnew[np.where(Cnew > 0)]) #normalize???
-        LoG_coeffs[L][node][1] = Cnew
-        
-LoG_P = {}
-LoG_P['Tessellations'] = P['Tessellations']
-LoG_P['Coefficients'] = LoG_coeffs
-
-###
-
-def posneg(im):
-    neg = np.zeros_like(im)
-    neg[np.where(im<0)] = 1
-    utils.picshow(neg, size=(15,15))
-
-LoG_N = Gpyramid_norm(LoG_P, R)
-for i in range(len(LoG_N)): 
-    utils.picshow(N[i])
-
-
 LoG_PV = PV2 - PV #vis_true
-LoG_PV2 = Gpyramid(LoG_P, V) #vis_true2
 LoG_vis_true = Gpyramid_backproject(P, LoG_PV, R, N, n=False)
-LoG_vis_true2 = Gpyramid_backproject(P, LoG_PV2, R, N, n=False)
 #TODO1: the two ways of obtaining log_PV do not yield the same results.
 
 """
@@ -379,29 +359,27 @@ visualisation (splatting after all) - as doing so through a DoG would re-constru
 the laplace pattern instead of showing where the activations actually happen.
 
 A good test for the pyramid is the spatial frequency human vision test. 
-File test2.jpg in images - construct an image like that for your test, sample with 
-pyramid/retina for good evaluations and include in paper.
+File test2.jpg in images - construct an image like that for your test, sample 
+with pyramid/retina for good evaluations and include in paper.
 """
 
 #visualize LoG pyramid
 print("LoG pyramid (below)")
 for i in [0,1,2]:
-    A = -LoG_vis_true2[i]
+    A = LoG_vis_true[i]
     B = N[i]
-    im = np.true_divide(A, B) +128
-    utils.picshow(im, size=(15,15))
+    im = np.true_divide(A, B)
+    utils.picshow(im, size=(10,10))
     print(A.max(), A.min(), len(np.unique(A)))
 print("LoG pyramid (above)")
-
-
 
 #visualize narrow pyramid
 print("Narrow pyramid (below)")
 for i in [0,1,2]:
     im = np.uint8(np.true_divide(vistrue[i],N[i]))
-    utils.picshow(im, size=(15,15))
+    utils.picshow(im, size=(10,10))
     print(len(np.unique(im)))
-utils.picshow(visnorm[-1], size=(15,15))
+utils.picshow(visnorm[-1], size=(10,10))
 print(len(np.unique(visnorm[-1])))
 print("Narrow pyramid (above)")
 
@@ -409,22 +387,11 @@ print("Narrow pyramid (above)")
 print("Wide pyramid (below)")
 for i in [0,1,2]:
     im = np.uint8(np.true_divide(vistrue2[i], N2[i]))
-    utils.picshow(im, size=(15,15))
+    utils.picshow(im, size=(10,10))
     print(len(np.unique(im)))
-utils.picshow(visnorm2[-1], size=(15,15))
+utils.picshow(visnorm2[-1], size=(10,10))
 print(len(np.unique(visnorm2[-1])))
 print("Wide pyramid (above)")
-
-"""NEXT:
-- Figures!!!!!!!!!!
-- Email paul showing the unnormalized images, ask him if this could be why the 
-DC leakage is there according to the model u talked about or what (PV subtraction
-causes quantization issues, no sane way to normalize it). 
-- Wrap up into neat code, object-like.
-- Does it work on the GPU?
-- Apply sumitha's parameters (lambda 1:L0, 1.7...:L123). 
-- Investigate the 'cortical color constancy model' params (lambda = 4)
-""" 
 
 #GAUSSIAN PYRAMIDS - make 2 with different rf sizes (factor 1.6 or 4)
 #Define cortical gaussian filters. Pages 89,90
