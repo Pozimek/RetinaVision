@@ -102,6 +102,13 @@ def memshow():
     print("Cached:", c)
     print("Remaining:", r, "(", r/total,")")
 
+#Gaussian receptive field calculation
+def d_gauss(self, sigma, d, normalize=True):
+    g = np.exp(-(d)**2/(2*sigma**2))/np.sqrt(2*np.pi*sigma**2)
+    if normalize: return g/np.sum(g)
+    else: return g
+
+
 """ Pickling functions. Pain ahead. 
 Py36 Pickle is not compatible with Py2 cPickle, so latin1 encoding is needed."""
 def loadPickle(path):
