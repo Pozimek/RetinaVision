@@ -190,18 +190,35 @@ REMEMBER2: coeff is redundantly wrapped in another matrix for backwards compatib
     def backproject_tight_last(self):
         return self.backproject_tight(self._V, self._imsize, self._fixation)
     
-    def backproject_tight(self, V, shape, fix):
+    def backproject_tight(self, V, shape, fix, normalize=True):
         """Produce a tight-fitted backprojection (width x width, lens only)"""
         fix = (int(fix[0]), int(fix[1]))
         #TODO: look at the weird artifacts at edges when the lens is too big for the frame. Might be a small bug
+        
         self.validate()
+        if fix != self._normFixation or shape[:2] != self._gaussNorm.shape: 
+            self.prepare(shape, fix)
+            
         rgb = len(shape) == 3 and shape[-1] == 3
         m = self.width
-        r = m/2.0
+        r = m/2.0    
+        
+        if self._cudaRetina:
+            self._imsize = (self.width, self.width)
+            self._cudaRetina.image_width = self.width
+            self._cudaRetina.image_height = self.width
+            self._cudaRetina.rgb = rgb
+            self._cudaRetina.center_x = self.width//2
+            self._cudaRetina.center_y = self.width//2
+            if not normalize: 
+                self._cudaRetina.set_gauss_norm(np.ones_like(self._gaussNormTight))
+            else: self._cudaRetina.set_gauss_norm(self._gaussNormTight)
+            return self._cudaRetina.backproject(V)
+        
+
         
         if rgb: I1 = np.zeros((m, m, 3))
         else: I1 = np.zeros((m, m))
-        I = np.zeros_like(I1)
         
         for i in range(self.N - 1,-1,-1):
             c = self.coeff[0, i]
@@ -211,9 +228,9 @@ REMEMBER2: coeff is redundantly wrapped in another matrix for backwards compatib
     
         GI = self._gaussNormTight
         if rgb: GI = np.dstack((GI,GI,GI)) #TODO: fix invalid value warnings
-        I = np.uint8(np.true_divide(I1,GI)) 
+        if normalize: I1 = np.uint8(np.true_divide(I1,GI)) 
         
-        self._backprojTight = I
-        return I
+        self._backprojTight = I1
+        return I1
     
     #TODO: add the crop function. Tightly crop original image using retinal lens

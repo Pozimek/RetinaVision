@@ -1,11 +1,9 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on 26/04/2018
+Created on Fri Feb 22 11:51:21 2019
 
-Barebones camera demo of the retina codes
-
-Now compatible with Python 3.
-
+Tight retina image demo trial
 @author: Piotr Ozimek
 """
 import cv2
@@ -31,30 +29,19 @@ y = campic.shape[0]/2
 fixation = (y,x)
 R.prepare(campic.shape, fixation)
 
-#Create and prepare cortex
-C = Cortex()
-lp = join(datadir, "cortices", "50k_Lloc_tight.pkl")
-rp = join(datadir, "cortices", "50k_Rloc_tight.pkl")
-C.loadLocs(lp, rp)
-C.loadCoeffs(join(datadir, "cortices", "50k_Lcoeff_tight.pkl"), join(datadir, "cortices", "50k_Rcoeff_tight.pkl"))
-
 while True:
     ret, img = cap.read()
     if ret is True:
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         V = R.sample(img, fixation)
         #tight = R.backproject_tight_last()
-        tight = R.backproject_last()
-        cimg = C.cort_img(V)
+        tight = R.backproject_tight_last()
         
         cv2.namedWindow("inverted", cv2.WINDOW_AUTOSIZE)
         cv2.imshow("inverted", tight) 
         
         cv2.namedWindow("input", cv2.WINDOW_AUTOSIZE)
         cv2.imshow("input", img) 
-        
-        cv2.namedWindow("cortical", cv2.WINDOW_AUTOSIZE)
-        cv2.imshow("cortical", cimg)
         
         key = cv2.waitKey(10)
         
