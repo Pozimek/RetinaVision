@@ -13,6 +13,13 @@ A Python implementation of the software retina being developed by the CVAS team 
 	opencv (for running examples only, might be replaced by imageio soon)
 	CUDA
 	
+	
+## Download
+Depending on how you download the package, the line endings of .pkl files can be changed causing the following error when running the demo:
+
+	ModuleNotFoundError: No module named 'numpy.core.multiarray\r'
+
+On Windows you have to download the package as a .zip and unpack it to prevent this issue. Using *git clone* might be safe on Ubuntu, but hasn't been tested.
 
 ## Installation
 After installing all of the requirements, navigate to the RetinaVision directory and run:
