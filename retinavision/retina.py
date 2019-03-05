@@ -93,23 +93,21 @@ REMEMBER2: coeff is redundantly wrapped in another matrix for backwards compatib
         # This will reset the image size only when it was changed.
         if self._imsize != image.shape[:2]:
             self._imsize = image.shape
-            if self._cudaRetina:
-                # TODO: helper function
-                self._cudaRetina.image_width = image.shape[1]
-                self._cudaRetina.image_height = image.shape[0]
-                self._cudaRetina.rgb = len(image.shape) == 3 and image.shape[-1] == 3
-                self._cudaRetina.center_x = int(fix[1])
-                self._cudaRetina.center_y = int(fix[0])
-                self._cudaRetina.set_gauss_norm(self._gaussNorm)
-
         if self._cudaRetina:
-            V = self._cudaRetina.sample(image)
+            # TODO: helper function
+            self._cudaRetina.image_width = image.shape[1]
+            self._cudaRetina.image_height = image.shape[0]
+            self._cudaRetina.rgb = len(image.shape) == 3 and image.shape[-1] == 3
+            self._cudaRetina.center_x = int(fix[1])
+            self._cudaRetina.center_y = int(fix[0])
+            self._cudaRetina.set_gauss_norm(self._gaussNorm)
+            V = self._cudaRetina.sample(np.uint8(image)) #XXX uint8 added
             self._V = V
             return V
 
         rgb = len(image.shape) == 3 and image.shape[-1] == 3
         p = self.width
-        pic = pad(image, p, True) #TODO: is this padding faster than calculating sampling windows?
+        pic = pad(image, p, True)
         
         X = self.loc[:,0] + fix[1] + p
         Y = self.loc[:,1] + fix[0] + p
@@ -159,7 +157,6 @@ REMEMBER2: coeff is redundantly wrapped in another matrix for backwards compatib
                 self._cudaRetina.rgb = len(shape) == 3 and shape[-1] == 3
                 self._cudaRetina.center_x = fix[1]
                 self._cudaRetina.center_y = fix[0]
-                self._cudaRetina.set_gauss_norm(self._gaussNorm)
         if self._cudaRetina:
             if not normalize: self._cudaRetina.set_gauss_norm(np.ones_like(self._gaussNorm))
             else: self._cudaRetina.set_gauss_norm(self._gaussNorm)
@@ -187,13 +184,13 @@ REMEMBER2: coeff is redundantly wrapped in another matrix for backwards compatib
         self._backproj = I1
         return I1
     
-    def backproject_tight_last(self):
-        return self.backproject_tight(self._V, self._imsize, self._fixation)
+    def backproject_tight_last(self, n=True):
+        return self.backproject_tight(self._V, self._imsize, self._fixation, normalize=n)
     
     def backproject_tight(self, V, shape, fix, normalize=True):
         """Produce a tight-fitted backprojection (width x width, lens only)"""
         fix = (int(fix[0]), int(fix[1]))
-        #TODO: look at the weird artifacts at edges when the lens is too big for the frame. Might be a small bug
+        #TODO: look at the weird artifacts at edges when the lens is too big for the frame. CPU version
         
         self.validate()
         if fix != self._normFixation or shape[:2] != self._gaussNorm.shape: 
@@ -204,14 +201,13 @@ REMEMBER2: coeff is redundantly wrapped in another matrix for backwards compatib
         r = m/2.0    
         
         if self._cudaRetina:
-            self._imsize = (self.width, self.width)
             self._cudaRetina.image_width = self.width
             self._cudaRetina.image_height = self.width
             self._cudaRetina.rgb = rgb
             self._cudaRetina.center_x = self.width//2
             self._cudaRetina.center_y = self.width//2
             if not normalize: 
-                self._cudaRetina.set_gauss_norm(np.ones_like(self._gaussNormTight))
+                self._cudaRetina.set_gauss_norm(None)
             else: self._cudaRetina.set_gauss_norm(self._gaussNormTight)
             return self._cudaRetina.backproject(V)
         
@@ -228,9 +224,9 @@ REMEMBER2: coeff is redundantly wrapped in another matrix for backwards compatib
     
         GI = self._gaussNormTight
         if rgb: GI = np.dstack((GI,GI,GI)) #TODO: fix invalid value warnings
-        if normalize: I1 = np.uint8(np.true_divide(I1,GI)) 
-        
-        self._backprojTight = I1
+        if normalize: 
+            I1 = np.uint8(np.true_divide(I1,GI)) 
+            self._backprojTight = I1
         return I1
     
     #TODO: add the crop function. Tightly crop original image using retinal lens
