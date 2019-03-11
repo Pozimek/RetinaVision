@@ -238,7 +238,7 @@ class CudaRetina(object):
         '''
         if compute_on_gpu:
             lib.Retina_setGaussNormImage(self.obj, None, 0, 0, 0)
-        else if gauss_norm is not None:
+        elif gauss_norm is not None:
             gauss_channels = 1
             gauss_norm_p = gauss_norm.flatten()
             if self.rgb:

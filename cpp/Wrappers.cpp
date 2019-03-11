@@ -89,6 +89,7 @@ extern "C" {
 		return ret->inverse(h_imageVector, vectorLength, h_imageInverse, imageH, imageW, imageC, useImageVectorOnDevice);
 	}
 
+	EXPORT
 	int Retina_inverseAndNormalise(Retina *ret, const double *h_imageVector,  size_t vectorLength,
 						   	   	   uchar *h_imageInverse, size_t imageH, size_t imageW, size_t imageC,
 						   	   	   bool useImageVectorOnDevice = false) {
