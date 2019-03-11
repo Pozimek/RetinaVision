@@ -94,12 +94,12 @@ class CudaRetina(object):
         lib.Retina_inverseAndNormalise.argtypes = [ctypes.c_void_p, \
         ctypes.POINTER(ctypes.c_double), ctypes.c_size_t, ctypes.POINTER(ctypes.c_uint8), \
         ctypes.c_size_t, ctypes.c_size_t, ctypes.c_size_t, ctypes.c_bool]
-        lib.Retina_inverse.restype = ctypes.c_int
+        lib.Retina_inverseAndNormalise.restype = ctypes.c_int
 
         lib.Retina_inverse.argtypes = [ctypes.c_void_p, \
         ctypes.POINTER(ctypes.c_double), ctypes.c_size_t, ctypes.POINTER(ctypes.c_double), \
         ctypes.c_size_t, ctypes.c_size_t, ctypes.c_size_t, ctypes.c_bool]
-        lib.Retina_inverse.restype = ctypes.c_double
+        lib.Retina_inverse.restype = ctypes.c_int
         
         lib.Retina_getRetinaSize.argtypes = [ctypes.c_void_p]
         lib.Retina_getRetinaSize.restype = ctypes.c_int
@@ -222,7 +222,7 @@ class CudaRetina(object):
                 (ctypes.c_double * len(coeff1D))(*coeff1D), loc.shape[0])
         self.resolveError(err)
 
-    def set_gauss_norm(self, gauss_norm=None, compute_on_gpu=True):
+    def set_gauss_norm(self, gauss_norm=None, compute_on_gpu=False):
         '''
         Sets the gaussian matrix to normalise with on backprojection\n
         Parameters
@@ -286,14 +286,14 @@ class CudaRetina(object):
         ----------
         image_vector : np.ndarray
             length must match retina size\n
-        Returns
-        -------
-        image : np.ndarray
-            Backprojected image
         normalise : bool
             Whether to normalise the image on the device.
             Note that this changes the return array type: true -> uint8, false -> double
             If true, gauss norm must be set on the device, otherwise the behaviour is undefined.
+        Returns
+        -------
+        image : np.ndarray
+            Backprojected image
         '''
         if len(image_vector.shape) > 1:
             image_vector = convert_to_gpu(image_vector)
@@ -303,7 +303,7 @@ class CudaRetina(object):
 
         err = 0
         if normalise:
-            err = lib.Retina_inverse_and_normalise(self.obj, \
+            err = lib.Retina_inverseAndNormalise(self.obj, \
                 image_vector.ctypes.data_as(ctypes.POINTER(ctypes.c_double)), \
                 self.retina_size * channels, image.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8)), \
                 self.image_height, self.image_width, channels, False)
@@ -311,7 +311,7 @@ class CudaRetina(object):
             image = np.empty(self.image_height * self.image_width * channels, dtype=ctypes.c_double)
             err = lib.Retina_inverse(self.obj, \
                 image_vector.ctypes.data_as(ctypes.POINTER(ctypes.c_double)), \
-                self.retina_size * channels, image.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8)), \
+                self.retina_size * channels, image.ctypes.data_as(ctypes.POINTER(ctypes.c_double)), \
                 self.image_height, self.image_width, channels, False)
         self.resolveError(err)
         

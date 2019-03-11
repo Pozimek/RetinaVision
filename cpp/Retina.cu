@@ -203,7 +203,7 @@ int Retina::inverse(const double *h_imageVector,  size_t vectorLength,
 		return error;
 	}
 
-	cudaMemcpy(h_imageInverse, d_imageInverse, sizeof(uchar) * _channels * _imageH * _imageW, cudaMemcpyDeviceToHost);
+	cudaMemcpy(h_imageInverse, d_imageInverse, sizeof(double) * _channels * _imageH * _imageW, cudaMemcpyDeviceToHost);
 	cudaCheckErrors("ERROR");
 
 	cudaFree(d_imageInverse);
@@ -214,6 +214,9 @@ int Retina::inverse(const double *h_imageVector,  size_t vectorLength,
 int Retina::inverseAndNormalise(const double *h_imageVector,  size_t vectorLength,
 							 uchar *h_imageInverse, size_t imageH, size_t imageW, size_t imageC,
 							 bool useImageVectorOnDevice) const {
+	if (d_gauss == nullptr)
+		return ERRORS::uninitialized;
+
 	double *d_imageInverse;
 	cudaMalloc((void**)&d_imageInverse, sizeof(double) * _channels * _imageH * _imageW);
 	cudaMemset(d_imageInverse, 0, sizeof(double) * _channels * _imageH * _imageW);
@@ -346,7 +349,7 @@ bool Retina::validateImageSize(size_t imageH, size_t imageW, size_t imageC) cons
 
 bool Retina::isReady() const {
 	return _imageH != 0 && _imageW != 0 && _centerX != 0 &&
-			_centerY != 0 && d_gauss != nullptr && _retinaSize != 0 && d_points != nullptr;
+			_centerY != 0 && _retinaSize != 0 && d_points != nullptr;
 }
 
 int Retina::removeSamplingPointsFromDevice() {
