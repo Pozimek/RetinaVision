@@ -114,7 +114,7 @@ Retina::~Retina() {
 }
 
 int Retina::sample(const uchar *h_imageIn, size_t imageH, size_t imageW, size_t imageC,
-							double *h_imageVector, size_t vectorLength, bool keepImageVectorOnDevice) {
+				   double *h_imageVector, size_t vectorLength, bool keepImageVectorOnDevice) {
 	if ((h_imageVector == nullptr && !keepImageVectorOnDevice) ||  h_imageIn == nullptr)
 		return ERRORS::invalidArguments;
 	if (!isReady())
@@ -156,10 +156,11 @@ int Retina::sample(const uchar *h_imageIn, size_t imageH, size_t imageW, size_t 
 	return 0;
 }
 
-int Retina::inverse(const double *h_imageVector,  size_t vectorLength,
-							 uchar *h_imageInverse, size_t imageH, size_t imageW, size_t imageC,
-							 bool useImageVectorOnDevice) const {
-	if ((h_imageVector == nullptr && !useImageVectorOnDevice) ||  h_imageInverse == nullptr )
+int Retina::inverseOnDevice(const double *h_imageVector,  size_t vectorLength,
+							double *d_imageInverse, size_t imageH, size_t imageW, size_t imageC,
+							bool useImageVectorOnDevice) const {
+	// Caller MUST manage memory of d_imageInverse!
+	if ((h_imageVector == nullptr && !useImageVectorOnDevice) ||  d_imageInverse == nullptr )
 		return ERRORS::invalidArguments;
 	if (!isReady() || (useImageVectorOnDevice && _d_imageVector == nullptr))
 		return ERRORS::uninitialized;
@@ -177,14 +178,52 @@ int Retina::inverse(const double *h_imageVector,  size_t vectorLength,
 		cudaCheckErrors("ERROR");
 	}
 
-	double *d_imageInverse;
-	cudaMalloc((void**)&d_imageInverse, sizeof(double) * _channels * _imageH * _imageW);
-	cudaMemset(d_imageInverse, 0, sizeof(double) * _channels * _imageH * _imageW);
-
 	inverse_kernel<<<ceil(_channels * _retinaSize / 512.0), 512>>>(d_imageVector, d_imageInverse, _imageH, _imageW,
 			_centerX, _centerY, d_points, _retinaSize, _rgb);
 	//cudaDeviceSynchronize();
 	cudaCheckErrors("ERROR");
+
+	if (!useImageVectorOnDevice)
+		cudaFree(d_imageVector);
+	cudaCheckErrors("ERROR");
+	return 0;
+}
+
+int Retina::inverse(const double *h_imageVector,  size_t vectorLength,
+					double *h_imageInverse, size_t imageH, size_t imageW, size_t imageC,
+					bool useImageVectorOnDevice) const {
+	double *d_imageInverse;
+	cudaMalloc((void**)&d_imageInverse, sizeof(double) * _channels * _imageH * _imageW);
+	cudaMemset(d_imageInverse, 0, sizeof(double) * _channels * _imageH * _imageW);
+	int error = inverseOnDevice(h_imageVector, vectorLength, d_imageInverse,
+								imageH, imageW, imageC, useImageVectorOnDevice);
+
+	if (error != 0) {
+		cudaFree(d_imageInverse);
+		return error;
+	}
+
+	cudaMemcpy(h_imageInverse, d_imageInverse, sizeof(uchar) * _channels * _imageH * _imageW, cudaMemcpyDeviceToHost);
+	cudaCheckErrors("ERROR");
+
+	cudaFree(d_imageInverse);
+	cudaCheckErrors("ERROR");
+	return 0;
+}
+
+int Retina::inverseAndNormalise(const double *h_imageVector,  size_t vectorLength,
+							 uchar *h_imageInverse, size_t imageH, size_t imageW, size_t imageC,
+							 bool useImageVectorOnDevice) const {
+	double *d_imageInverse;
+	cudaMalloc((void**)&d_imageInverse, sizeof(double) * _channels * _imageH * _imageW);
+	cudaMemset(d_imageInverse, 0, sizeof(double) * _channels * _imageH * _imageW);
+	int error = inverseOnDevice(h_imageVector, vectorLength, d_imageInverse,
+								imageH, imageW, imageC, useImageVectorOnDevice);
+
+	if (error != 0) {
+		cudaFree(d_imageInverse);
+		return error;
+	}
 
 	uchar *d_imageInverseNorm;
 	cudaMalloc((void**)&d_imageInverseNorm, sizeof(uchar) * _channels * _imageH * _imageW);
@@ -197,8 +236,6 @@ int Retina::inverse(const double *h_imageVector,  size_t vectorLength,
 	cudaMemcpy(h_imageInverse, d_imageInverseNorm, sizeof(uchar) * _channels * _imageH * _imageW, cudaMemcpyDeviceToHost);
 	cudaCheckErrors("ERROR");
 
-	if (!useImageVectorOnDevice)
-		cudaFree(d_imageVector);
 	cudaFree(d_imageInverse);
 	cudaFree(d_imageInverseNorm);
 	cudaCheckErrors("ERROR");

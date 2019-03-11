@@ -35,8 +35,11 @@ public:
 				double *h_imageVector, size_t vectorLength,
 				bool keepImageVectorOnDevice = false);
 	int inverse(const double *h_imageVector,  size_t vectorLength,
-				uchar *h_imageInverse, size_t imageH, size_t imageW, size_t imageC,
+				double *h_imageInverse, size_t imageH, size_t imageW, size_t imageC,
 				bool useImageVectorOnDevice = false) const;
+	int inverseAndNormalise(const double *h_imageVector,  size_t vectorLength,
+					uchar *h_imageInverse, size_t imageH, size_t imageW, size_t imageC,
+					bool useImageVectorOnDevice = false) const;
 
 	int getRetinaSize() const { return _retinaSize; }
 
@@ -60,6 +63,9 @@ public:
 private:
 	bool isReady() const;
 	bool validateImageSize(size_t imageH, size_t imageW, size_t imageC) const;
+	int inverseOnDevice(const double *h_imageVector,  size_t vectorLength,
+					double *d_imageInverse, size_t imageH, size_t imageW, size_t imageC,
+					bool useImageVectorOnDevice = false) const;
 	int removeSamplingPointsFromDevice();
 
 	bool _rgb;
