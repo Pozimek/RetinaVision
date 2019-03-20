@@ -160,7 +160,7 @@ REMEMBER2: coeff is redundantly wrapped in another matrix for backwards compatib
         if self._cudaRetina:
             if not normalize: self._cudaRetina.set_gauss_norm(np.ones_like(self._gaussNorm)) #XXX
             else: self._cudaRetina.set_gauss_norm(self._gaussNorm)
-            return self._cudaRetina.backproject(V)
+            return self._cudaRetina.backproject(V, normalize)
         
         rgb = len(shape) == 3 and shape[-1] == 3
         m = shape[:2]
@@ -209,7 +209,7 @@ REMEMBER2: coeff is redundantly wrapped in another matrix for backwards compatib
             if not normalize: 
                 self._cudaRetina.set_gauss_norm(np.ones_like(self._gaussNormTight))
             else: self._cudaRetina.set_gauss_norm(self._gaussNormTight)
-            return self._cudaRetina.backproject(V)
+            return self._cudaRetina.backproject(V, normalize)
         
 
         
