@@ -70,10 +70,7 @@ class Pyramid:
           retina variable.")
     
     """Core sampling/pyramidizing function"""
-    def sample(self, img, fixation):
-        self.retina.prepare(img.shape, fixation)
-        V0 = self.retina.sample(img, fixation)
-        
+    def sample(self, V0):        
         PV = np.ndarray(self.levels, dtype='object')
         PV[0] = V0
         
@@ -117,7 +114,7 @@ class Pyramid:
         #from the top
         BI = []
         for v in BV[::-1]:
-            BI.append(R.backproject(v, R._imsize, R._fixation, normalize=n))
+            BI.append(R.backproject_tight(v, R._imsize, R._fixation, normalize=n))
         return BI
     
     def visualize(self, BI, title, log=False):
@@ -234,17 +231,17 @@ class PyramidBuilder:
         return P
 
     """Produce normalization maps for each level of the pyramid""" 
-    def Gpyramid_norm(self, P, R):
+    def Gpyramid_norm(self, tess, coeffs, R):
         PV_norm = []
         for i in [1,2,3]:
             #Project unmodulated coefficients down a level (unit imagevector)
-            V_stream = [np.ones(len(P['Tessellations'][i]))]
+            V_stream = [np.ones(len(tess[i]))]
             
             #Down-propagate the projection to the retina
             for j in range(i,0,-1):
-                Av = np.zeros(len(P['Tessellations'][j-1]))
-                C = P['Coefficients'][j-1]
-                for rf in range(len(P['Tessellations'][j])):
+                Av = np.zeros(len(tess[j-1]))
+                C = coeffs[j-1]
+                for rf in range(len(tess[j])):
                     Av[C[rf][0]] += C[rf][1] * V_stream[-1][rf]
                 V_stream.append(Av)
     
@@ -255,33 +252,75 @@ class PyramidBuilder:
             for i in range(R.N - 1, -1, -1): 
                 GI = utils.project(V[i] * R.coeff[0,i], GI, R.loc[i,:2][::-1] + r)
             
-            norm = np.zeros(R._imsize[:2])
-            norm = utils.project(GI, norm, R._normFixation)
+            norm = np.zeros((R.width, R.width))
+            norm = utils.project(GI, norm, (R.width//2, R.width//2))
             PV_norm.insert(0, norm)
             
         return PV_norm
 
 
+##Load retina, take a pic and sample
+#R = Retina(gpu=False)
+#R.loadLoc(join(datadir, "retinas", "ret50k_loc.pkl"))
+#R.loadCoeff(join(datadir, "retinas", "ret50k_coeff.pkl"))
+#
+##impath = "D:\\RETINA\\images\\Harmony_of_Dragons.jpg"
+##impath = "D:\\RETINA\\images\\TEST.png"
+#impath = "D:\\RETINA\\images\\original.png"
+#img = np.float64(cv2.imread(impath, 0))
+#x = img.shape[1]/2
+#y = img.shape[0]/2
+#fixation = (y,x)
+#
+#R.prepare(img.shape, fixation)
+#V = R.sample(img, fixation)
+#backproj = np.true_divide(R.backproject_last(n=False),R._gaussNorm)
+#utils.picshow(np.uint8(backproj), size=(10,10))
 
-#Load retina, take a pic and sample
-R = Retina(gpu=False)
-R.loadLoc(join(datadir, "retinas", "ret50k_loc.pkl"))
-R.loadCoeff(join(datadir, "retinas", "ret50k_coeff.pkl"))
+##
+#PB = PyramidBuilder()
+#pyr_path = join(datadir,"pyramid")
+#L = utils.loadPickle(join(pyr_path, "50K_pyr_narrow_tessellations.pkl"))
+#lambda1 = 1.7321 #sumitha's lambda, w/ retina layer = 1
+#lambda2 = 1.6 * lambda1 #wider rfs
+#rffov = 2.4 #k_ratio
+#
+#P = PB.Gpyramid_build(L, lambda1, rffov) #narrow
+#N = PB.Gpyramid_norm(P, R)
+#utils.writePickle(join(pyr_path, "50K_pyr_narrow_coeffs.pkl"), P["Coefficients"])
+#utils.writePickle(join(pyr_path, "50K_pyr_narrow_normmaps.pkl"), N)
+#utils.writePickle(join(pyr_path,"50K_pyr_narrow_tessellations.pkl"), L)
+#
+#P2 = PB.Gpyramid_build(L, lambda2, rffov) #wide
+#N2 = PB.Gpyramid_norm(P2, R)
+#utils.writePickle(join(pyr_path, "50K_pyr_wide_coeffs.pkl"), P2["Coefficients"])
+##utils.writePickle(join(pyr_path, "50K_pyr_wide_normmaps.pkl"), N2)
+#utils.writePickle(join(pyr_path,"50K_pyr_wide_tessellations.pkl"), P2["Tessellations"])
 
-#impath = "D:\\RETINA\\images\\Harmony_of_Dragons.jpg"
-#impath = "D:\\RETINA\\images\\TEST.png"
-impath = "D:\\RETINA\\images\\original.png"
-img = np.float64(cv2.imread(impath, 0))
-x = img.shape[1]/2
-y = img.shape[0]/2
-fixation = (y,x)
 
-R.prepare(img.shape, fixation)
-V = R.sample(img, fixation)
-backproj = np.true_divide(R.backproject_last(n=False),R._gaussNorm)
-utils.picshow(np.uint8(backproj), size=(10,10))
+######
+#        
+#pyr_path = join(datadir,"pyramid")
+#L = utils.loadPickle(join(pyr_path, "50K_pyr_narrow_tessellations.pkl"))
+#C = utils.loadPickle(join(pyr_path, "50K_pyr_narrow_coeffs.pkl"))
+#L2 = utils.loadPickle(join(pyr_path, "50K_pyr_wide_tessellations.pkl"))
+#C2 = utils.loadPickle(join(pyr_path, "50K_pyr_wide_coeffs.pkl"))
+#
+#PB = PyramidBuilder()
+#N = PB.Gpyramid_norm(L, C, R)
+#N2 = PB.Gpyramid_norm(L2, C2, R)
+#
+##
+#
+#utils.writePickle(join(pyr_path, "50K_pyr_narrow_normmaps.pkl"), N)
+#utils.writePickle(join(pyr_path, "50K_pyr_wide_normmaps.pkl"), N2)
 
-
+######
+#'applied constant blurring in each layer = 1.7321 * initial blurring
+#which gives 1.7321 * graph edge, or mean_dist_5. That's used to compute diameter
+#of cortical support as well as gaussian sigma. In the retinal layer he maintains
+#the value at 1, whereas your retina seems best with the value at 0.5 
+#(lambda, or sigma_base). If his lambda fails, try 0.5 * 1.7321.
 """
 A good test for the pyramid is the spatial frequency human vision test. 
 File test2.jpg in images - construct an image like that for your test, sample 
@@ -289,37 +328,32 @@ with pyramid/retina for good evaluations and include in paper.
 """
 
 ##Testing object model
-
-#Files
-pyr_path = join(datadir,"pyramid")
-L = utils.loadPickle(join(pyr_path, "50K_pyr_narrow_tessellations.pkl"))
-L2 = utils.loadPickle(join(pyr_path, "50K_pyr_wide_tessellations.pkl"))
-N = utils.loadPickle(join(pyr_path, "50K_pyr_narrow_normmaps.pkl"))
-N2 = utils.loadPickle(join(pyr_path, "50K_pyr_wide_normmaps.pkl"))
-C = utils.loadPickle(join(pyr_path, "50K_pyr_narrow_coeffs.pkl"))
-C2 = utils.loadPickle(join(pyr_path, "50K_pyr_wide_coeffs.pkl"))
-
-#init
-narrow = Pyramid(tess = L, coeffs = C, N=N, R=R)
-wide = Pyramid(tess = L2, coeffs = C2, N=N2, R=R)
-
-#process
-narrow_PV = narrow.sample(img, fixation)
-wide_PV = wide.sample(img, fixation)
-laplace = wide_PV - narrow_PV
-
-#backproject
-narrow_vis = narrow.backproject_last()
-wide_vis = wide.backproject_last()
-laplace_vis = narrow.backproject(laplace, R._imsize, fixation)
-
-#visualize
-narrow.visualize(narrow_vis, "Narrow Gaussian Pyramid")
-wide.visualize(wide_vis, "Wide Gaussian Pyramid")
-narrow.visualize(laplace_vis, "Laplacian Gaussian Pyramid", log=True)
-        
-#'applied constant blurring in each layer = 1.7321 * initial blurring
-#which gives 1.7321 * graph edge, or mean_dist_5. That's used to compute diameter
-#of cortical support as well as gaussian sigma. In the retinal layer he maintains
-#the value at 1, whereas your retina seems best with the value at 0.5 
-#(lambda, or sigma_base). If his lambda fails, try 0.5 * 1.7321.
+#
+##Files
+#pyr_path = join(datadir,"pyramid")
+#L = utils.loadPickle(join(pyr_path, "50K_pyr_narrow_tessellations.pkl"))
+#L2 = utils.loadPickle(join(pyr_path, "50K_pyr_wide_tessellations.pkl"))
+#N = utils.loadPickle(join(pyr_path, "50K_pyr_narrow_normmaps.pkl"))
+#N2 = utils.loadPickle(join(pyr_path, "50K_pyr_wide_normmaps.pkl"))
+#C = utils.loadPickle(join(pyr_path, "50K_pyr_narrow_coeffs.pkl"))
+#C2 = utils.loadPickle(join(pyr_path, "50K_pyr_wide_coeffs.pkl"))
+#
+##init
+#narrow = Pyramid(tess = L, coeffs = C, N=N, R=R)
+#wide = Pyramid(tess = L2, coeffs = C2, N=N2, R=R)
+#
+##process
+#narrow_PV = narrow.sample(V)
+#wide_PV = wide.sample(V)
+#laplace = wide_PV - narrow_PV
+#
+##backproject
+#narrow_vis = narrow.backproject_last()
+#wide_vis = wide.backproject_last()
+#laplace_vis = narrow.backproject(laplace, R._imsize, fixation)
+#
+##visualize
+#narrow.visualize(narrow_vis, "Narrow Gaussian Pyramid")
+#wide.visualize(wide_vis, "Wide Gaussian Pyramid")
+#narrow.visualize(laplace_vis, "Laplacian Gaussian Pyramid", log=True)
+#        

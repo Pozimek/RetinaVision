@@ -158,7 +158,7 @@ REMEMBER2: coeff is redundantly wrapped in another matrix for backwards compatib
                 self._cudaRetina.center_x = fix[1]
                 self._cudaRetina.center_y = fix[0]
         if self._cudaRetina:
-            if not normalize: self._cudaRetina.set_gauss_norm(np.ones_like(self._gaussNorm))
+            if not normalize: self._cudaRetina.set_gauss_norm(np.ones_like(self._gaussNorm)) #XXX
             else: self._cudaRetina.set_gauss_norm(self._gaussNorm)
             return self._cudaRetina.backproject(V)
         
@@ -207,7 +207,7 @@ REMEMBER2: coeff is redundantly wrapped in another matrix for backwards compatib
             self._cudaRetina.center_x = self.width//2
             self._cudaRetina.center_y = self.width//2
             if not normalize: 
-                self._cudaRetina.set_gauss_norm(None)
+                self._cudaRetina.set_gauss_norm(np.ones_like(self._gaussNormTight))
             else: self._cudaRetina.set_gauss_norm(self._gaussNormTight)
             return self._cudaRetina.backproject(V)
         
