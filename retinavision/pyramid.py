@@ -21,7 +21,6 @@ Extensions:
     - extrema detection 
     - ->corners
 
-- names: change all LoG and laplace to DoG
 - robustness to different pyramidss
 - so, uh, was/is objectify() needed?
 - parameter investigations 
@@ -91,11 +90,11 @@ class Pyramid:
         self.PV = PV
         return PV
     
-    def backproject_last(self, n=False):
+    def backproject_last(self, n=True):
         out = self.backproject(self.PV, self.retina._imsize, self.retina._fixation, n)
         return out    
     
-    def backproject(self, PV, shape, fixation, n=False, laplace=False):
+    def backproject(self, PV, shape, fixation, n=True):
         R = self.retina #TODO cleanup variable namespace
         BV = []
         BV.append(PV[0])
@@ -113,14 +112,17 @@ class Pyramid:
                 
         #from the top
         BI = []
-        for v in BV[::-1]:
-            BI.append(R.backproject_tight(v, R._imsize, R._fixation, normalize=n))
+        for i, v in enumerate(BV[::-1]):
+            if i == len(BV[::-1])-1: 
+                BI.append(R.backproject_tight(v, R._imsize, R._fixation, normalize=n)) ###TODO: correct?
+            else:
+                BI.append(R.backproject_tight(v, R._imsize, R._fixation, normalize=n, norm=self.norm_maps[i]))
         return BI
     
-    def visualize(self, BI, title, log=False):
+    def visualize(self, BI, title, dog=False): #redundant since GPU
         print(title + " (below)")
         for i in range(len(BI[:-1])): #:-1 skips the retinal level
-            if log: 
+            if dog: 
                 utils.picshow(np.true_divide(BI[i], self.norm_maps[i]))
             else: 
                 utils.picshow(np.uint8(np.true_divide(BI[i], self.norm_maps[i])))
@@ -276,57 +278,57 @@ class PyramidBuilder:
 #V = R.sample(img, fixation)
 #backproj = np.true_divide(R.backproject_last(n=False),R._gaussNorm)
 #utils.picshow(np.uint8(backproj), size=(10,10))
-
+#
+###
+##PB = PyramidBuilder()
+##pyr_path = join(datadir,"pyramid")
+##L = utils.loadPickle(join(pyr_path, "50K_pyr_narrow_tessellations.pkl"))
+##lambda1 = 1.7321 #sumitha's lambda, w/ retina layer = 1
+##lambda2 = 1.6 * lambda1 #wider rfs
+##rffov = 2.4 #k_ratio
 ##
-#PB = PyramidBuilder()
-#pyr_path = join(datadir,"pyramid")
-#L = utils.loadPickle(join(pyr_path, "50K_pyr_narrow_tessellations.pkl"))
-#lambda1 = 1.7321 #sumitha's lambda, w/ retina layer = 1
-#lambda2 = 1.6 * lambda1 #wider rfs
-#rffov = 2.4 #k_ratio
+##P = PB.Gpyramid_build(L, lambda1, rffov) #narrow
+##N = PB.Gpyramid_norm(P, R)
+##utils.writePickle(join(pyr_path, "50K_pyr_narrow_coeffs.pkl"), P["Coefficients"])
+##utils.writePickle(join(pyr_path, "50K_pyr_narrow_normmaps.pkl"), N)
+##utils.writePickle(join(pyr_path,"50K_pyr_narrow_tessellations.pkl"), L)
+##
+##P2 = PB.Gpyramid_build(L, lambda2, rffov) #wide
+##N2 = PB.Gpyramid_norm(P2, R)
+##utils.writePickle(join(pyr_path, "50K_pyr_wide_coeffs.pkl"), P2["Coefficients"])
+###utils.writePickle(join(pyr_path, "50K_pyr_wide_normmaps.pkl"), N2)
+##utils.writePickle(join(pyr_path,"50K_pyr_wide_tessellations.pkl"), P2["Tessellations"])
 #
-#P = PB.Gpyramid_build(L, lambda1, rffov) #narrow
-#N = PB.Gpyramid_norm(P, R)
-#utils.writePickle(join(pyr_path, "50K_pyr_narrow_coeffs.pkl"), P["Coefficients"])
-#utils.writePickle(join(pyr_path, "50K_pyr_narrow_normmaps.pkl"), N)
-#utils.writePickle(join(pyr_path,"50K_pyr_narrow_tessellations.pkl"), L)
 #
-#P2 = PB.Gpyramid_build(L, lambda2, rffov) #wide
-#N2 = PB.Gpyramid_norm(P2, R)
-#utils.writePickle(join(pyr_path, "50K_pyr_wide_coeffs.pkl"), P2["Coefficients"])
+#######
+##        
+##pyr_path = join(datadir,"pyramid")
+##L = utils.loadPickle(join(pyr_path, "50K_pyr_narrow_tessellations.pkl"))
+##C = utils.loadPickle(join(pyr_path, "50K_pyr_narrow_coeffs.pkl"))
+##L2 = utils.loadPickle(join(pyr_path, "50K_pyr_wide_tessellations.pkl"))
+##C2 = utils.loadPickle(join(pyr_path, "50K_pyr_wide_coeffs.pkl"))
+##
+##PB = PyramidBuilder()
+##N = PB.Gpyramid_norm(L, C, R)
+##N2 = PB.Gpyramid_norm(L2, C2, R)
+##
+###
+##
+##utils.writePickle(join(pyr_path, "50K_pyr_narrow_normmaps.pkl"), N)
 ##utils.writePickle(join(pyr_path, "50K_pyr_wide_normmaps.pkl"), N2)
-#utils.writePickle(join(pyr_path,"50K_pyr_wide_tessellations.pkl"), P2["Tessellations"])
-
-
-######
-#        
-#pyr_path = join(datadir,"pyramid")
-#L = utils.loadPickle(join(pyr_path, "50K_pyr_narrow_tessellations.pkl"))
-#C = utils.loadPickle(join(pyr_path, "50K_pyr_narrow_coeffs.pkl"))
-#L2 = utils.loadPickle(join(pyr_path, "50K_pyr_wide_tessellations.pkl"))
-#C2 = utils.loadPickle(join(pyr_path, "50K_pyr_wide_coeffs.pkl"))
 #
-#PB = PyramidBuilder()
-#N = PB.Gpyramid_norm(L, C, R)
-#N2 = PB.Gpyramid_norm(L2, C2, R)
+#######
+##'applied constant blurring in each layer = 1.7321 * initial blurring
+##which gives 1.7321 * graph edge, or mean_dist_5. That's used to compute diameter
+##of cortical support as well as gaussian sigma. In the retinal layer he maintains
+##the value at 1, whereas your retina seems best with the value at 0.5 
+##(lambda, or sigma_base). If his lambda fails, try 0.5 * 1.7321.
+#"""
+#A good test for the pyramid is the spatial frequency human vision test. 
+#File test2.jpg in images - construct an image like that for your test, sample 
+#with pyramid/retina for good evaluations and include in paper.
+#"""
 #
-##
-#
-#utils.writePickle(join(pyr_path, "50K_pyr_narrow_normmaps.pkl"), N)
-#utils.writePickle(join(pyr_path, "50K_pyr_wide_normmaps.pkl"), N2)
-
-######
-#'applied constant blurring in each layer = 1.7321 * initial blurring
-#which gives 1.7321 * graph edge, or mean_dist_5. That's used to compute diameter
-#of cortical support as well as gaussian sigma. In the retinal layer he maintains
-#the value at 1, whereas your retina seems best with the value at 0.5 
-#(lambda, or sigma_base). If his lambda fails, try 0.5 * 1.7321.
-"""
-A good test for the pyramid is the spatial frequency human vision test. 
-File test2.jpg in images - construct an image like that for your test, sample 
-with pyramid/retina for good evaluations and include in paper.
-"""
-
 ##Testing object model
 #
 ##Files
@@ -348,12 +350,22 @@ with pyramid/retina for good evaluations and include in paper.
 #laplace = wide_PV - narrow_PV
 #
 ##backproject
-#narrow_vis = narrow.backproject_last()
-#wide_vis = wide.backproject_last()
-#laplace_vis = narrow.backproject(laplace, R._imsize, fixation)
+##narrow_vis = narrow.backproject_last()
+##wide_vis = wide.backproject_last()
+#laplace_vis = narrow.backproject(laplace, R._imsize, fixation, n=False)
 #
 ##visualize
-#narrow.visualize(narrow_vis, "Narrow Gaussian Pyramid")
-#wide.visualize(wide_vis, "Wide Gaussian Pyramid")
-#narrow.visualize(laplace_vis, "Laplacian Gaussian Pyramid", log=True)
+##narrow.visualize(narrow_vis, "Narrow Gaussian Pyramid")
+##wide.visualize(wide_vis, "Wide Gaussian Pyramid")
+##narrow.visualize(laplace_vis, "Laplacian Gaussian Pyramid", log=True)
+##for im in narrow_vis:
+##    utils.picshow(im)
+##
+##for im in wide_vis:
+##    utils.picshow(im)
+#
+#for im in laplace_vis:
+#    utils.picshow(im)
 #        
+#    
+#narrow.visualize(laplace_vis, "DoG", dog=False)

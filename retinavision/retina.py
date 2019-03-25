@@ -158,8 +158,7 @@ REMEMBER2: coeff is redundantly wrapped in another matrix for backwards compatib
                 self._cudaRetina.center_x = fix[1]
                 self._cudaRetina.center_y = fix[0]
         if self._cudaRetina:
-            if not normalize: self._cudaRetina.set_gauss_norm(np.ones_like(self._gaussNorm)) #XXX
-            else: self._cudaRetina.set_gauss_norm(self._gaussNorm)
+            self._cudaRetina.set_gauss_norm(self._gaussNorm)
             return self._cudaRetina.backproject(V, normalize)
         
         rgb = len(shape) == 3 and shape[-1] == 3
@@ -184,10 +183,10 @@ REMEMBER2: coeff is redundantly wrapped in another matrix for backwards compatib
         self._backproj = I1
         return I1
     
-    def backproject_tight_last(self, n=True):
-        return self.backproject_tight(self._V, self._imsize, self._fixation, normalize=n)
+    def backproject_tight_last(self, n=True, norm=None):
+        return self.backproject_tight(self._V, self._imsize, self._fixation, normalize=n, norm=norm)
     
-    def backproject_tight(self, V, shape, fix, normalize=True):
+    def backproject_tight(self, V, shape, fix, normalize=True, norm=None):
         """Produce a tight-fitted backprojection (width x width, lens only)"""
         fix = (int(fix[0]), int(fix[1]))
         #TODO: look at the weird artifacts at edges when the lens is too big for the frame. CPU version
@@ -206,13 +205,10 @@ REMEMBER2: coeff is redundantly wrapped in another matrix for backwards compatib
             self._cudaRetina.rgb = rgb
             self._cudaRetina.center_x = self.width//2
             self._cudaRetina.center_y = self.width//2
-            if not normalize: 
-                self._cudaRetina.set_gauss_norm(np.ones_like(self._gaussNormTight))
-            else: self._cudaRetina.set_gauss_norm(self._gaussNormTight)
+            if norm is None: self._cudaRetina.set_gauss_norm(self._gaussNormTight)
+            else: self._cudaRetina.set_gauss_norm(norm)
             return self._cudaRetina.backproject(V, normalize)
-        
-
-        
+             
         if rgb: I1 = np.zeros((m, m, 3))
         else: I1 = np.zeros((m, m))
         
